@@ -40,6 +40,10 @@ object mapReduce {
     last_list.map(el => reduce(el, reduce_func))
   }
   def main(args: Array[String]): Unit = {
+    /*
+    *
+    * I was curious to start with sequence of words
+    */
     val array = "Little Car Seven Nine Top Seven Car Nine Seven Nine Car Car Car Seven Nine Top"
     val list_words = array.split(" ").toList
     println("List for work: "+list_words)
@@ -55,5 +59,23 @@ object mapReduce {
     println(result2)
     println("Elapsed time (parallel): "+(t4-t3) + " ns")
 
+    /*
+    *
+    * AND now numbers
+    */
+
+    val r = scala.util.Random
+    val num_list = List.fill(1024)(r.nextInt(10).toString)
+    print("List for work: "+num_list)
+    val t20 = System.nanoTime()
+    val result21 = nonParallelMapReduce(num_list, el => (el,1), (_+_))
+    val t21 = System.nanoTime()
+    println(result21)
+    println("Elapsed time (non parallel): "+(t21-t20) + " ns")
+    val t23 = System.nanoTime()
+    val result22 = worker(num_list, el => (el,1), (_+_))
+    val t24 = System.nanoTime()
+    println(result22)
+    println("Elapsed time (parallel): "+(t24-t23) + " ns")
   }
 }
