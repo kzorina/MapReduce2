@@ -2,59 +2,58 @@ package map_reduce
 import my_utils.parallel
 
 object mapReduce {
-  val nWorkers = 4
-  val chunkSize = 3
-  def map(input: List[String]): List[(String, Int)] = {
-    input.map(word => (word, 1))
+  val nThreads = 4
+  val threshold = 4
+  def map(input: List[String], f: String => (String, Int)): List[(String, Int)] = {
+    input.map(f)
   }
-
   def reduce(input: List[(String, Int)], f: (Int, Int) => Int): (String, Int) = {
-    //println(input)
     val key = input.head._1
-    //println(input.foldLeft(0)((acc, tup) => f(acc,tup._2)))
-    //println((key, input.foldLeft(0)((acc, tup) => f(acc,tup._2))))
     (key, input.foldLeft(0)((acc, tup) => f(acc,tup._2)))
-    /*var result = List[(String, Int)]
-    for (element <- input) {
-
-      println(element)
-
-      val result = result :: ))
-    }*/
-    //println(input.foreach(x => x.foldLeft(0)((acc, tup) => acc + tup._2)))
-    //input.foreach(x => x.foldLeft(0)((acc, tup) => acc + tup._2))
   }
+  def mapParallel(input: List[List[String]], f: String => (String, Int)): List[(String, Int)] = input match{
+    case x if x.length > 1 => {
+      val (x,y) = parallel(map(input.head, f: String => (String, Int)),mapParallel(input.tail, f: String => (String, Int)))
+      x ::: y
+    }
+    case _ => map(input.head, f: String => (String, Int))
+  }
+  def reduceParallel(input: List[List[(String, Int)]], f: (Int, Int) => Int):List[(String, Int)] = input match{
+    case x if x.length > 1 => {
+      val (x,y) = parallel(reduce(input.head, f),reduceParallel(input.tail, f))
+      List(x) ::: y
+    }
+    case _ => List(reduce(input.head, f))
+  }
+  def worker(input: List[String], map_func: String => (String, Int), reduce_func:(Int, Int) => Int):List[(String, Int)] = {
+    val split_list = input.grouped(input.length/threshold).toList
+    val mapped_list = mapParallel(split_list, map_func)
+    val sorted_list = mapped_list.groupBy(x => x._1).valuesIterator.toList
+    reduceParallel(sorted_list, reduce_func)
 
-  /*
-    def shuffle() {}
-
-    def worker(list_words: List[String],
-               map: String => (String, Int),
-               reduce: (String, Int) => (String, Int)): Unit = {
-
-    }*/
-  def main(args: Array[String]): Unit = {
-    val array = "Little Car Seven Nine Top Seven Car Nine Seven"
-    val list_words = array.split(" ").toList
-    println(list_words.length)
-    println(list_words.length/4)
-    //println(list_words mkString "\n")
-    val split_list = list_words.grouped(list_words.length/chunkSize).toList
-    println(split_list)
-    val all_list = split_list.map(x => map(x))
-      //.foldRight(List("New"))((x,y) => x ::: y)
+  }
+  def nonParallelMapReduce(list_words:List[String], map_func: String => (String, Int), reduce_func:(Int, Int) => Int) = {
+    val split_list = list_words.grouped(list_words.length/threshold).toList
+    val all_list = split_list.map(x => map(x,map_func))
     val sort = all_list.foldRight(List[(String, Int)]())((x,y) => x ::: y)
-    println(sort)
-    println(sort.groupBy(x => x._1).valuesIterator.toList)
     val last_list = sort.groupBy(x => x._1).valuesIterator.toList
-      for (element <- last_list){
-        println(reduce(element, (_+_)))
-      }
+    last_list.map(el => reduce(el, reduce_func))
+  }
+  def main(args: Array[String]): Unit = {
+    val array = "Little Car Seven Nine Top Seven Car Nine Seven Nine Car Car Car Seven Nine Top"
+    val list_words = array.split(" ").toList
+    println("List for work: "+list_words)
 
-    //println(sort.map(x => _+_))
-    //val reduce = sort.map(x => )
-   /* println(worker(list_words,
-                    map : word => (word, 1),
-                    reduce: (key, value) => (key, sum(values)) ))*/
+    val t0 = System.nanoTime()
+    val result1 = nonParallelMapReduce(list_words, el => (el,1), (_+_))
+    val t1 = System.nanoTime()
+    println(result1)
+    println("Elapsed time (non parallel): "+(t1-t0) + " ns")
+    val t3 = System.nanoTime()
+    val result2 = worker(list_words, el => (el,1), (_+_))
+    val t4 = System.nanoTime()
+    println(result2)
+    println("Elapsed time (parallel): "+(t4-t3) + " ns")
+
   }
 }
