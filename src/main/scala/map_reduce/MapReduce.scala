@@ -26,10 +26,10 @@ object MapReduce {
   }
   def worker(input: List[String], map_func: String => (String, Int), reduce_func:(Int, Int) => Int):List[(String, Int)] = {
     val split_list = input.grouped(input.length/nMappers).toList
-    println("There will be "+split_list.length+" mappers")
+    //println("There will be "+split_list.length+" mappers")
     val mapped_list = mapParallel(split_list, map_func)
     val sorted_list = mapped_list.groupBy(x => x._1).valuesIterator.toList
-    println("There will be "+sorted_list.length+" reducers")
+    //println("There will be "+sorted_list.length+" reducers")
     reduceParallel(sorted_list, reduce_func)
 
   }
@@ -60,16 +60,16 @@ object MapReduce {
     println("Speedup with parallel: "+(t1-t0)/(t4-t3).toDouble)
     println()
     println()
-    
+
     /*
     *
     * AND now numbers
     */
 
 
-    nMappers = 16
+    nMappers = 4
     val r = scala.util.Random
-    val num_list = List.fill(1024)(r.nextInt(10).toString)
+    val num_list = List.fill(scala.math.pow(2, 10).toInt)(r.nextInt(10).toString)
     println("List for work: "+num_list)
     val t20 = System.nanoTime()
     val result21 = nonParallelMapReduce(num_list, el => (el,1), _+_)
